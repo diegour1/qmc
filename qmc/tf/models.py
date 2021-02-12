@@ -293,7 +293,7 @@ class ComplexDMKDClassifier(tf.keras.Model):
         self.num_classes = num_classes
         self.qmd = []
         for _ in range(num_classes):
-            self.qmd.append(layers.QMeasureDensity(dim_x))
+            self.qmd.append(layers.ComplexQMeasureDensity(dim_x))
         self.cp = layers.CrossProduct()
         self.num_samples = tf.Variable(
             initial_value=tf.zeros((num_classes,)),
@@ -333,7 +333,7 @@ class ComplexDMKDClassifier(tf.keras.Model):
         return {}
 
     def fit(self, *args, **kwargs):
-        result = super(DMKDClassifier, self).fit(*args, **kwargs)
+        result = super(ComplexDMKDClassifier, self).fit(*args, **kwargs)
         for i in range(self.num_classes):
             self.qmd[i].weights[0].assign(self.qmd[i].weights[0] /
                                           tf.cast(self.num_samples[i], tf.complex64))
