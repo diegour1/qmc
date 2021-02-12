@@ -481,14 +481,10 @@ class QMeasureDensity(tf.keras.layers.Layer):
         self.built = True
 
     def call(self, inputs):
-        oper = tf.einsum(
-            '...i,...j->...ij',
-            inputs, tf.math.conj(inputs),
-            optimize='optimal') # shape (b, nx, nx)
         rho_res = tf.einsum(
-            '...ik, km, ...mi -> ...',
-            oper, self.rho, oper,
-            optimize='optimal')  # shape (b, nx, ny, nx, ny)
+            '...k, km, ...m -> ...',
+            tf.math.conj(inputs), self.rho, inputs,
+            optimize='optimal')  # shape (b,)
         return rho_res
 
     def compute_output_shape(self, input_shape):
