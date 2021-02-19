@@ -380,33 +380,26 @@ class QMeasureClassifEig(tf.keras.layers.Layer):
         self.built = True
 
     def call(self, inputs):
-        oper = tf.einsum(
-            '...i,...j->...ij',
-            inputs, tf.math.conj(inputs),
-            optimize='optimal') # shape (b, nx, nx)
         norms = tf.expand_dims(tf.linalg.norm(self.eig_vec, axis=0), axis=0)
         eig_vec = self.eig_vec / norms
         eig_val = tf.keras.activations.relu(self.eig_val)
         eig_val = eig_val / tf.reduce_sum(eig_val)
         rho_h = tf.matmul(eig_vec,
-                          tf.linalg.diag(tf.sqrt(eig_val)))
+                          tf.linalg.diag(tf.sqrt(eig_val))) 
         rho = tf.matmul(
             rho_h, 
             tf.transpose(rho_h, conjugate=True))
         rho = tf.reshape(
             rho, 
             (self.dim_x, self.dim_y, self.dim_x, self.dim_y))
-        rho_res = tf.einsum(
-            '...ik, klmn, ...mo -> ...ilon',
-            oper, rho, oper,
-            optimize='optimal')  # shape (b, nx, ny, ny, nx)
-        trace_val = tf.einsum('...ijij->...', rho_res, optimize='optimal') # shape (b)
+        rho_y = tf.einsum(
+            '...k, klmn, ...m -> ...ln',
+            tf.math.conj(inputs), rho, inputs,
+            optimize='optimal')  # shape (b, ny, ny)
+        trace_val = tf.einsum('...ii->...', rho_y, optimize='optimal')
         trace_val = tf.expand_dims(trace_val, axis=-1)
         trace_val = tf.expand_dims(trace_val, axis=-1)
-        trace_val = tf.expand_dims(trace_val, axis=-1)
-        trace_val = tf.expand_dims(trace_val, axis=-1)
-        rho_res = rho_res / trace_val
-        rho_y = tf.einsum('...ijik->...jk', rho_res, optimize='optimal') # shape (b, ny, ny)
+        rho_y = rho_y / trace_val
         return rho_y
 
     def set_rho(self, rho):
