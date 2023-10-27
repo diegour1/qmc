@@ -253,21 +253,19 @@ class ComplexQMDensity(tf.keras.Model):
         data =  data_adapter.expand_1d(data)
         x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
         if x.shape[1] is not None:
-            rho = self.call_train(x) ### here is the errro
+            rho = self.call_train(x)
             self.qmd.weights[0].assign_add(rho)
         return {}
 
     def fit(self, *args, **kwargs):
         result = super(ComplexQMDensity, self).fit(*args, **kwargs)
         self.num_samples = tf.cast(self.num_samples, tf.complex64)
-        self.qmd.weights[0].assign(self.qmd.weights[0] / self.num_samples) ### error here
+        self.qmd.weights[0].assign(self.qmd.weights[0] / self.num_samples)
         return result
 
     def get_config(self):
         base_config = super().get_config()
         return {**base_config}
-
-
 
 class QMDensitySGD(tf.keras.Model):
     """
