@@ -214,6 +214,60 @@ class QMDensity(tf.keras.Model):
     def get_config(self):
         base_config = super().get_config()
         return {**base_config}
+    
+class ComplexQMDensity(tf.keras.Model):
+    """
+    A Quantum Measurement Density Estimation model.
+    Arguments:
+        fm_x: Quantum feature map layer for inputs
+        dim_x: dimension of the input quantum feature map
+    """
+    def __init__(self, fm_x, dim_x):
+        super(ComplexQMDensity, self).__init__()
+        self.fm_x = fm_x
+        self.dim_x = dim_x
+        self.qmd = layers.ComplexQMeasureDensity(dim_x)
+        self.cp = layers.CrossProduct()
+        self.num_samples = tf.Variable(
+            initial_value=0.,
+            trainable=False     
+            )
+
+    def call(self, inputs):
+        psi_x = self.fm_x(inputs)
+        probs = self.qmd(psi_x)
+        return probs
+
+    @tf.function
+    def call_train(self, x):
+        if not self.qmd.built:
+            self.call(x)
+        psi = self.fm_x(x)
+        rho = self.cp([psi, tf.math.conj(psi)])
+        num_samples = tf.cast(tf.shape(x)[0], tf.float32)
+        rho = tf.reduce_sum(rho, axis=0)
+        self.num_samples.assign_add(num_samples)
+        return rho
+
+    def train_step(self, data):
+        data =  data_adapter.expand_1d(data)
+        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
+        if x.shape[1] is not None:
+            rho = self.call_train(x) ### here is the errro
+            self.qmd.weights[0].assign_add(rho)
+        return {}
+
+    def fit(self, *args, **kwargs):
+        result = super(ComplexQMDensity, self).fit(*args, **kwargs)
+        self.num_samples = tf.cast(self.num_samples, tf.complex64)
+        self.qmd.weights[0].assign(self.qmd.weights[0] / self.num_samples) ### error here
+        return result
+
+    def get_config(self):
+        base_config = super().get_config()
+        return {**base_config}
+
+
 
 class QMDensitySGD(tf.keras.Model):
     """
