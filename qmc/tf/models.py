@@ -568,7 +568,7 @@ class ComplexDMKDClassifierSGD(tf.keras.Model):
 
 class ComplexDMKDRegressor(tf.keras.Model):
     """
-    A Quantum Measurement Density Estimation model.
+    A Quantum Measurement Kernel Density Regressor model.
     Arguments:
         fm_x: Quantum feature map layer for inputs
         dim_x: dimension of the input quantum feature map
