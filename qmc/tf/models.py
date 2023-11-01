@@ -607,7 +607,7 @@ class ComplexDMKDRegressor(tf.keras.Model):
 
     @tf.function
     def call_train_reg(self, x, y):
-        if not self.qmd.built:
+        if not self.qmr.built:
             self.call(x)
         psi = self.fm_x(x)
         y = tf.cast(tf.expand_dims(y, axis=-1), tf.complex64)
