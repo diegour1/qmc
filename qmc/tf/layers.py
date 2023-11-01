@@ -283,7 +283,7 @@ class QFeatureMapComplexRFF(tf.keras.layers.Layer):
             self,
             input_dim: int,
             dim: int = 100,
-            gamma: float = 1,
+            gamma: float = 0.5,
             random_state=None,
             **kwargs
     ):

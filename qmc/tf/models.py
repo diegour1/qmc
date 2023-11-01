@@ -566,6 +566,78 @@ class ComplexDMKDClassifierSGD(tf.keras.Model):
         base_config = super().get_config()
         return {**base_config, **config}
 
+class ComplexDMKDRegressor(tf.keras.Model):
+    """
+    A Quantum Measurement Density Estimation model.
+    Arguments:
+        fm_x: Quantum feature map layer for inputs
+        dim_x: dimension of the input quantum feature map
+    """
+    def __init__(self, fm_x, dim_x):
+        super(ComplexDMKDRegressor, self).__init__()
+        self.fm_x = fm_x
+        self.dim_x = dim_x
+        self.qmd = layers.ComplexQMeasureDensity(dim_x)
+        self.qmr = layers.ComplexQMeasureDensity(dim_x)
+        self.cpd = layers.CrossProduct()
+        self.cpr = layers.CrossProduct()
+        self.num_samples = tf.Variable(
+            initial_value=0.,
+            trainable=False
+            )
+
+    def call(self, inputs):
+        psi_x = self.fm_x(inputs)
+        probs_de = self.qmd(psi_x)
+        probs_reg = self.qmr(psi_x)
+        probs = probs_reg / probs_de
+        probs = tf.cast(probs, tf.float32)
+        return probs
+
+    @tf.function
+    def call_train_de(self, x):
+        if not self.qmd.built:
+            self.call(x)
+        psi = self.fm_x(x)
+        rho_de = self.cpd([psi, tf.math.conj(psi)])
+        num_samples = tf.cast(tf.shape(x)[0], tf.float32)
+        rho_de = tf.reduce_sum(rho_de, axis=0)
+        self.num_samples.assign_add(num_samples)
+        return rho_de
+
+    @tf.function
+    def call_train_reg(self, x, y):
+        if not self.qmd.built:
+            self.call(x)
+        psi = self.fm_x(x)
+        y = tf.cast(tf.expand_dims(y, axis=-1), tf.complex64)
+        rho_reg = y*self.cpr([psi, tf.math.conj(psi)])
+        num_samples = tf.cast(tf.shape(x)[0], tf.float32)
+        rho_reg = tf.reduce_sum(rho_reg, axis=0)
+        self.num_samples.assign_add(num_samples)
+        return rho_reg
+
+    def train_step(self, data):
+        data =  data_adapter.expand_1d(data)
+        x, y, sample_weight = data_adapter.unpack_x_y_sample_weight(data)
+        if x.shape[1] is not None:
+            rho_de = self.call_train_de(x)
+            rho_reg = self.call_train_reg(x, y)
+            self.qmd.weights[0].assign_add(rho_de)
+            self.qmr.weights[0].assign_add(rho_reg)
+        return {}
+
+    def fit(self, *args, **kwargs):
+        result = super(ComplexDMKDRegressor, self).fit(*args, **kwargs)
+        self.num_samples = tf.cast(self.num_samples, tf.complex64)
+        self.qmd.weights[0].assign(self.qmd.weights[0] / self.num_samples)
+        self.qmr.weights[0].assign(self.qmr.weights[0] / self.num_samples)
+        return result
+
+    def get_config(self):
+        base_config = super().get_config()
+        return {**base_config}
+
 class QMRegressor(tf.keras.Model):
     """
     A Quantum Measurement Regression model.
