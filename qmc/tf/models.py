@@ -133,11 +133,11 @@ class ComplexQMClassifierSGD(tf.keras.Model):
         gamma: float. Gamma parameter of the RBF kernel to be approximated.
         random_state: random number generator seed.
     """
-    def __init__(self, input_dim, dim_x, dim_y, num_eig=0, gamma=1, random_state=None):
+    def __init__(self, input_dim, dim_x, dim_y, num_eig=0, gamma=1, random_state=None, train_ffs = True):
         super(ComplexQMClassifierSGD, self).__init__()
         self.fm_x = layers.QFeatureMapComplexRFF(
             input_dim=input_dim,
-            dim=dim_x, gamma=gamma, random_state=random_state)
+            dim=dim_x, gamma=gamma, random_state=random_state, train_ffs = train_ffs)
         self.qm = layers.ComplexQMeasureClassifEig(dim_x=dim_x, dim_y=dim_y, num_eig=num_eig)
         self.dm2dist = layers.ComplexDensityMatrix2Dist()
         self.dim_x = dim_x
@@ -651,9 +651,9 @@ class ComplexDMKDRegressorSGD:
         An instantiated model ready to train with ad-hoc data.
 
     """
-    def __init__(self, input_dim, num_ffs, y_min, y_max, num_eig=0, gamma=1, batch_size = 16, learning_rate = 0.0005, random_state=None, auto_compile=True):
+    def __init__(self, input_dim, num_ffs, y_min, y_max, num_eig=0, gamma=1, batch_size = 16, learning_rate = 0.0005, random_state=None, train_ffs = True, auto_compile=True):
 
-        self.model = ComplexQMClassifierSGD(input_dim = input_dim, dim_x = num_ffs, dim_y = 2, num_eig=num_eig, gamma=gamma, random_state=random_state)
+        self.model = ComplexQMClassifierSGD(input_dim = input_dim, dim_x = num_ffs, dim_y = 2, num_eig=num_eig, gamma=gamma, random_state=random_state, train_ffs = train_ffs)
         self.num_ffs = num_ffs
         self.gamma = gamma
         self.y_min = y_min

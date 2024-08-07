@@ -285,6 +285,7 @@ class QFeatureMapComplexRFF(tf.keras.layers.Layer):
             dim: int = 100,
             gamma: float = 0.5,
             random_state=None,
+            train_ffs = True,
             **kwargs
     ):
         super().__init__(**kwargs)
@@ -292,6 +293,7 @@ class QFeatureMapComplexRFF(tf.keras.layers.Layer):
         self.dim = dim
         self.gamma = gamma
         self.random_state = random_state
+        self.train_ffs = train_ffs
 
 
     def build(self, input_shape):
@@ -304,7 +306,7 @@ class QFeatureMapComplexRFF(tf.keras.layers.Layer):
         self.rff_weights = tf.Variable(
             initial_value=rbf_sampler.random_weights_,
             dtype=tf.float32,
-            trainable=True,
+            trainable=self.train_ffs,
             name="rff_weights")
         self.built = True
 
