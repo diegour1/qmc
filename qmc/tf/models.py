@@ -4,6 +4,7 @@ Quantum Measurement Classfiication Models
 
 import tensorflow as tf
 from tensorflow.python.keras.engine import data_adapter
+import numpy as np
 from . import layers
 
 class QMClassifier(tf.keras.Model):
@@ -637,6 +638,103 @@ class ComplexDMKDRegressor(tf.keras.Model):
     def get_config(self):
         base_config = super().get_config()
         return {**base_config}
+    
+class ComplexDMKDRegressorSGD:
+    r"""
+    Defines the ready-to-use Density matrix kernel density regression (DMKDR) model
+     using the TensorFlow/Keras API. Any additional argument in the methods has to be Keras-compliant.
+
+    Args:
+        auto_compile: A boolean to autocompile the model using default settings. (Default True).
+
+    Returns:
+        An instantiated model ready to train with ad-hoc data.
+
+    """
+    def __init__(self, input_dim, num_ffs, y_min, y_max, num_eig=0, gamma=1, batch_size = 16, learning_rate = 0.0005, random_state=None, auto_compile=True):
+
+        self.model = ComplexQMClassifierSGD(input_dim = input_dim, dim_x = num_ffs, dim_y = 2, num_eig=num_eig, gamma=gamma, random_state=random_state)
+        self.num_ffs = num_ffs
+        self.gamma = gamma
+        self.y_min = y_min
+        self.y_max = y_max
+        self.learning_rate = learning_rate
+        self.batch_size = batch_size
+        self.random_state = random_state
+
+        if auto_compile:
+            self.compile()
+
+    def preprocess_outputs(
+            self,
+            y_train,
+            **kwargs):
+        r"""
+        Method to preprocess the outputs y_train.
+
+        Args:
+            y_train:
+            **kwargs: Any additional argument.
+
+        Returns:
+            new_outputs
+        """
+
+        y_normalized = (y_train - self.y_min)/(self.y_max - self.y_min)
+        y_normalized_oh = np.zeros((y_normalized.shape[0], 2))
+        y_normalized_oh[:, 0], y_normalized_oh[:, 1] = y_normalized.ravel(), (1 - y_normalized).ravel()
+
+        return y_normalized_oh
+
+    def compile(
+            self,
+            optimizer=tf.keras.optimizers.Adam,
+            **kwargs):
+        r"""
+        Method to compile the model.
+
+        Args:
+            optimizer:
+            **kwargs: Any additional argument.
+
+        Returns:
+            None.
+        """
+        self.model.compile(
+            loss = "categorical_crossentropy",
+            optimizer=optimizer(self.learning_rate),
+            metrics=['mean_squared_error'],
+            **kwargs
+        )
+
+    def fit(self, x_train, y_train, batch_size=16, epochs = 30, **kwargs):
+        r"""
+        Method to fit (train) the model using the ad-hoc dataset.
+
+        Args:
+            x_train:
+            y_train:
+            batch_size:
+            epochs:
+            **kwargs: Any additional argument.
+
+        Returns:
+            None.
+        """
+        y_preprocessed = self.preprocess_outputs(y_train)
+        self.model.fit(x_train, y_preprocessed, batch_size = self.batch_size, epochs = epochs, **kwargs)
+
+    def predict(self, x_test):
+      r"""
+      Method to make predictions with the trained model.
+
+      Args:
+          x_test:
+
+      Returns:
+          The predictions of the predicted regression of the input data.
+      """
+      return ((self.y_max - self.y_min)*self.model.predict(x_test) + self.y_min)[:, 0]
 
 class QMRegressor(tf.keras.Model):
     """
